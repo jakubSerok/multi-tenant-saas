@@ -25,21 +25,24 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  const tickets = await db.ticket.findMany({
-    where: {
-      organizationId: session.user.organizationId,
+ const tickets = await db.ticket.findMany({
+  where: {
+    organizationId: session.user.organizationId,
+    OR: [
+      { userId: session.user.id },                     
+      { assignees: { some: { userId: session.user.id } } }, 
+    ],
+  },
+  orderBy: { createdAt: "desc" },
+  include: {
+    assignees: {
+      include: { user: { select: { name: true, email: true } } },
     },
-    orderBy: { createdAt: "desc" },
-    include: {
-      assignedTo: true,
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
+    user: {
+      select: { name: true, email: true },
     },
-  });
+  },
+});
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -106,7 +109,9 @@ export default async function DashboardPage() {
                             <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                             </svg>
-                            {ticket.assignedTo ? ticket.assignedTo.name : 'Unassigned'}
+                            {ticket.assignees && ticket.assignees.length > 0
+                              ? ticket.assignees.map((assignee) => assignee.user.name).join(', ')
+                              : 'Unassigned'}
                           </p>
                           <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
                             <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

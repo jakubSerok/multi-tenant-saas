@@ -26,7 +26,7 @@ export default function NewTicketPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>('MEDIUM');
-  const [assignedToId, setAssignedToId] = useState<string>("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +40,6 @@ export default function NewTicketPage() {
         }
         const data = await response.json();
         setUsers(data);
-        if (data.length > 0) {
-          setAssignedToId(data[0].id);
-        }
       } catch (err) {
         setError('Failed to load users. Please try again later.');
         console.error('Error fetching users:', err);
@@ -71,7 +68,7 @@ export default function NewTicketPage() {
           title, 
           description, 
           priority,
-          assignedToId: assignedToId || null,
+          assigneeIds: selectedUserIds,
         }),
       });
 
@@ -89,7 +86,7 @@ export default function NewTicketPage() {
   };
 
   const selectedPriority = priorities.find(p => p.value === priority) || priorities[1];
-  const selectedUser = users.find(user => user.id === assignedToId);
+  const selectedUsers = users.filter((user) => selectedUserIds.includes(user.id));
 
   if (isLoading) {
     return (
@@ -210,11 +207,18 @@ export default function NewTicketPage() {
                   Assign To
                 </label>
                 <div className="mt-1">
-                  <Listbox value={assignedToId} onChange={setAssignedToId} disabled={users.length === 0}>
+                  <Listbox
+                    value={selectedUserIds}
+                    onChange={setSelectedUserIds}
+                    disabled={users.length === 0}
+                    multiple
+                  >
                     <div className="relative">
                       <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm">
                         <span className="block truncate">
-                          {selectedUser ? selectedUser.name : 'No users available'}
+                          {selectedUsers.length === 0
+                            ? 'Select assignees'
+                            : selectedUsers.map((user) => user.name).join(', ')}
                         </span>
                         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                           <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
