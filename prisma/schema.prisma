@@ -37,19 +37,19 @@ model Organization {
 }
 
 model User {
-  id              String        @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
-  email           String        @unique
+  email           String           @unique
   password        String
-  role            UserRole      @default(USER)
+  role            UserRole         @default(USER)
 
   organizationId  String
-  organization    Organization  @relation(fields: [organizationId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id])
 
-  tickets         Ticket[]      @relation("UserTickets")
-  assignedTickets Ticket[]      @relation("AssignedTickets")
+  tickets         Ticket[]         @relation("UserTickets")
+  assignedTickets TicketAssignee[]
 
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime         @default(now())
 }
 
 model Ticket {
@@ -57,19 +57,28 @@ model Ticket {
   title           String
   description     String
 
-  status          TicketStatus    @default(OPEN)
-  priority        TicketPriority  @default(MEDIUM)
+  status          TicketStatus     @default(OPEN)
+  priority        TicketPriority   @default(MEDIUM)
 
   userId          String
   user            User             @relation("UserTickets", fields: [userId], references: [id])
 
-  assignedToId    String?
-  assignedTo      User?            @relation("AssignedTickets", fields: [assignedToId], references: [id])
-
   organizationId  String
   organization    Organization     @relation(fields: [organizationId], references: [id])
+
+  assignees       TicketAssignee[]
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   closedAt        DateTime?
+}
+
+model TicketAssignee {
+  ticketId String
+  userId   String
+
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@id([ticketId, userId])
 }
