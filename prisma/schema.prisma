@@ -26,14 +26,15 @@ enum TicketPriority {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  bio       String?
+  id          String        @id @default(cuid())
+  name        String
+  bio         String?
 
-  users     User[]
-  tickets   Ticket[]
+  users       User[]
+  tickets     Ticket[]
+  invitations Invitation[]
 
-  createdAt DateTime @default(now())
+  createdAt   DateTime      @default(now())
 }
 
 model User {
@@ -48,6 +49,7 @@ model User {
 
   tickets         Ticket[]         @relation("UserTickets")
   assignedTickets TicketAssignee[]
+  sentInvitations Invitation[]     @relation("Invitations")
 
   createdAt       DateTime         @default(now())
 }
@@ -67,7 +69,6 @@ model Ticket {
   organization    Organization     @relation(fields: [organizationId], references: [id])
 
   assignees       TicketAssignee[]
-
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   closedAt        DateTime?
@@ -81,4 +82,23 @@ model TicketAssignee {
   user     User   @relation(fields: [userId], references: [id])
 
   @@id([ticketId, userId])
+}
+
+model Invitation {
+  id             String   @id @default(cuid())
+  email          String
+  token          String   @unique
+  role           UserRole @default(USER)
+  
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  invitedBy      String
+  inviter        User         @relation("Invitations", fields: [invitedBy], references: [id])
+  
+  accepted       Boolean  @default(false)
+  expiresAt      DateTime
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

@@ -110,7 +110,7 @@ export async function POST(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const assigneeIds = await req.json();
+    const { assigneeIds } = await req.json();
 
     if (!Array.isArray(assigneeIds)) {
         return NextResponse.json({ error: "Invalid format" }, { status: 400 });
