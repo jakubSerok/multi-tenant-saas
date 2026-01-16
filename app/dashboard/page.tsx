@@ -1,9 +1,12 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { authOptions } from "@/app/api/auth/options";
+
 import Link from "next/link";
-import { TicketPriority, TicketStatus } from "@prisma/client";
+import { TicketPriority, TicketStatus, UserRole } from "@prisma/client";
 import { formatDistanceToNow } from "date-fns";
+import { InviteUsersClient } from "./components/InviteUsersClient";
 
 const statusColors = {
   [TicketStatus.OPEN]: 'bg-blue-100 text-blue-800',
@@ -19,19 +22,35 @@ const priorityColors = {
 };
 
 export default async function DashboardPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
-  if (!session) {
+  if (!session || !session.user?.email) {
     redirect("/auth/login");
   }
 
- const tickets = await db.ticket.findMany({
+  // Get user info with role and organization
+  const user = await db.user.findUnique({
+    where: { email: session.user.email },
+    select: { 
+      role: true, 
+      organizationId: true 
+    }
+  });
+
+  if (!user) {
+    redirect("/auth/login");
+  }
+
+ 
+  const tickets = await db.ticket.findMany({
   where: {
-    organizationId: session.user.organizationId,
-    OR: [
-      { userId: session.user.id },                     
-      { assignees: { some: { userId: session.user.id } } }, 
-    ],
+    organizationId: user.organizationId,
+    ...(user.role === 'MANAGER' ? {} : {
+      OR: [
+        { userId: session.user.id },                     
+        { assignees: { some: { userId: session.user.id } } }, 
+      ],
+    }),
   },
   orderBy: { createdAt: "desc" },
   include: {
@@ -44,6 +63,7 @@ export default async function DashboardPage() {
   },
 });
 
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -52,15 +72,21 @@ export default async function DashboardPage() {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600">Manage your support tickets</p>
           </div>
-          <Link
-            href="/dashboard/tickets/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            New Ticket
-          </Link>
+          <div className="flex gap-3">
+            <InviteUsersClient 
+              organizationId={user.organizationId} 
+              userRole={user.role} 
+            />
+            <Link
+              href="/dashboard/tickets/new"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              New Ticket
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
