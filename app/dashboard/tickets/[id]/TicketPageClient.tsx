@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { EditTicketModal } from "./components/EditTicketModal";
 import { AssignUsersModal } from "./components/AssignUsersModal";
+import { Comments } from "./components/Comments";
 
 interface User {
   name: string;
@@ -24,6 +25,30 @@ interface Ticket {
   userId: string;
   user: User;
   assignees: Array<{ user: User; userId: string; ticketId: string }>;
+  comments?: Array<{
+    id: string;
+    content: string;
+    isPrivate: boolean;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+    editedAt?: Date | string;
+    editedBy?: string;
+    userId: string;
+    user: User;
+    parentId?: string;
+    replies?: Array<{
+      id: string;
+      content: string;
+      isPrivate: boolean;
+      createdAt: Date | string;
+      updatedAt: Date | string;
+      editedAt?: Date | string;
+      editedBy?: string;
+      userId: string;
+      user: User;
+      parentId?: string;
+    }>;
+  }>;
 }
 
 interface TicketPageClientProps {
@@ -168,19 +193,11 @@ export function TicketPageClient({ ticket, currentUserId }: TicketPageClientProp
               </div>
             </div>
 
-            <div className="mt-6 bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Activity & Comments</h2>
-              </div>
-              <div className="px-6 py-4">
-                <div className="text-center text-gray-500 py-8">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                  </svg>
-                  <p className="mt-2">No comments yet. Be the first to comment!</p>
-                </div>
-              </div>
-            </div>
+            <Comments 
+              comments={ticketData.comments || []} 
+              ticketId={ticketData.id} 
+              currentUserId={currentUserId} 
+            />
           </div>
 
           <div className="lg:col-span-1">
