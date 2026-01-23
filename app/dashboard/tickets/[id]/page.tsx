@@ -30,6 +30,18 @@ export default async function TicketPage({ params }: Props) {
           user: { select: { name: true, email: true } },
         },
       },
+      comments: {
+        include: {
+          user: { select: { name: true, email: true } },
+          replies: {
+            include: {
+              user: { select: { name: true, email: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
 
