@@ -7,6 +7,8 @@ import Link from "next/link";
 import { TicketPriority, TicketStatus, UserRole } from "@prisma/client";
 import { formatDistanceToNow } from "date-fns";
 import { InviteUsersClient } from "./components/InviteUsersClient";
+import { TicketFilters } from "./components/TicketFilters";
+import { Pagination } from "./components/Pagination";
 
 const statusColors = {
   [TicketStatus.OPEN]: 'bg-blue-100 text-blue-800',
@@ -21,7 +23,17 @@ const priorityColors = {
   [TicketPriority.URGENT]: 'bg-red-100 text-red-800',
 };
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{
+    status?: string;
+    priority?: string;
+    sort?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.email) {
@@ -42,17 +54,74 @@ export default async function DashboardPage() {
   }
 
  
-  const tickets = await db.ticket.findMany({
-  where: {
+  const resolvedSearchParams = await searchParams;
+  const page = parseInt(resolvedSearchParams.page || '1');
+  const pageSize = parseInt(resolvedSearchParams.pageSize || '10');
+  const status = resolvedSearchParams.status as TicketStatus | undefined;
+  const priority = resolvedSearchParams.priority as TicketPriority | undefined;
+  const sort = resolvedSearchParams.sort || '';
+
+ 
+
+  const whereClause: any = {
     organizationId: user.organizationId,
     ...(user.role === 'MANAGER' ? {} : {
       OR: [
-        { userId: session.user.id },                     
+        { userId: session.user.id },                      
         { assignees: { some: { userId: session.user.id } } }, 
       ],
     }),
-  },
-  orderBy: { createdAt: "desc" },
+  };
+
+  if (status) {
+    whereClause.status = status;
+  }
+
+  if (priority) {
+    whereClause.priority = priority;
+  }
+
+  let orderBy: any = { createdAt: "desc" };
+  if (sort) {
+    switch (sort) {
+      case 'createdAt_asc':
+        orderBy = { createdAt: "asc" };
+        break;
+      case 'updatedAt_desc':
+        orderBy = { updatedAt: "desc" };
+        break;
+      case 'updatedAt_asc':
+        orderBy = { updatedAt: "asc" };
+        break;
+      case 'priority_desc':
+        orderBy = [
+          { priority: "desc" },
+          { createdAt: "desc" }
+        ];
+        break;
+      case 'priority_asc':
+        orderBy = [
+          { priority: "asc" },
+          { createdAt: "desc" }
+        ];
+        break;
+      default:
+        orderBy = { createdAt: "desc" };
+    }
+  }
+
+  const totalCount = await db.ticket.count({
+    where: whereClause,
+  });
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const skip = (page - 1) * pageSize;
+
+  const tickets = await db.ticket.findMany({
+  where: whereClause,
+  orderBy,
+  skip,
+  take: pageSize,
   include: {
     assignees: {
       include: { user: { select: { name: true, email: true } } },
@@ -89,13 +158,18 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        <TicketFilters />
+
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Recent Tickets
+              Tickets ({totalCount})
             </h3>
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              All tickets in your organization
+              {status && `Status: ${status.replace('_', ' ')} | `}
+              {priority && `Priority: ${priority.toLowerCase()} | `}
+              {sort && `Sorted: ${sort.replace('_', ' ')} | `}
+              Page {page} of {totalPages}
             </p>
           </div>
           
@@ -160,6 +234,13 @@ export default async function DashboardPage() {
             </ul>
           )}
         </div>
+
+        <Pagination 
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={totalCount}
+        />
       </div>
     </div>
   );
