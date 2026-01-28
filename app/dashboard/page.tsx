@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { SignOutButton } from "./components/SignOutButton";
 import { db } from "@/lib/db";
 import { authOptions } from "@/app/api/auth/options";
 
@@ -11,16 +12,16 @@ import { TicketFilters } from "./components/TicketFilters";
 import { Pagination } from "./components/Pagination";
 
 const statusColors = {
-  [TicketStatus.OPEN]: 'bg-blue-100 text-blue-800',
-  [TicketStatus.IN_PROGRESS]: 'bg-yellow-100 text-yellow-800',
-  [TicketStatus.CLOSED]: 'bg-green-100 text-green-800',
+  [TicketStatus.OPEN]: "bg-blue-100 text-blue-800",
+  [TicketStatus.IN_PROGRESS]: "bg-yellow-100 text-yellow-800",
+  [TicketStatus.CLOSED]: "bg-green-100 text-green-800",
 };
 
 const priorityColors = {
-  [TicketPriority.LOW]: 'bg-gray-100 text-gray-800',
-  [TicketPriority.MEDIUM]: 'bg-blue-100 text-blue-800',
-  [TicketPriority.HIGH]: 'bg-orange-100 text-orange-800',
-  [TicketPriority.URGENT]: 'bg-red-100 text-red-800',
+  [TicketPriority.LOW]: "bg-gray-100 text-gray-800",
+  [TicketPriority.MEDIUM]: "bg-blue-100 text-blue-800",
+  [TicketPriority.HIGH]: "bg-orange-100 text-orange-800",
+  [TicketPriority.URGENT]: "bg-red-100 text-red-800",
 };
 
 interface DashboardPageProps {
@@ -33,7 +34,9 @@ interface DashboardPageProps {
   }>;
 }
 
-export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.email) {
@@ -43,34 +46,33 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // Get user info with role and organization
   const user = await db.user.findUnique({
     where: { email: session.user.email },
-    select: { 
-      role: true, 
-      organizationId: true 
-    }
+    select: {
+      role: true,
+      organizationId: true,
+    },
   });
 
   if (!user) {
     redirect("/auth/login");
   }
 
- 
   const resolvedSearchParams = await searchParams;
-  const page = parseInt(resolvedSearchParams.page || '1');
-  const pageSize = parseInt(resolvedSearchParams.pageSize || '10');
+  const page = parseInt(resolvedSearchParams.page || "1");
+  const pageSize = parseInt(resolvedSearchParams.pageSize || "10");
   const status = resolvedSearchParams.status as TicketStatus | undefined;
   const priority = resolvedSearchParams.priority as TicketPriority | undefined;
-  const sort = resolvedSearchParams.sort || '';
-
- 
+  const sort = resolvedSearchParams.sort || "";
 
   const whereClause: any = {
     organizationId: user.organizationId,
-    ...(user.role === 'MANAGER' ? {} : {
-      OR: [
-        { userId: session.user.id },                      
-        { assignees: { some: { userId: session.user.id } } }, 
-      ],
-    }),
+    ...(user.role === "MANAGER"
+      ? {}
+      : {
+          OR: [
+            { userId: session.user.id },
+            { assignees: { some: { userId: session.user.id } } },
+          ],
+        }),
   };
 
   if (status) {
@@ -84,26 +86,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let orderBy: any = { createdAt: "desc" };
   if (sort) {
     switch (sort) {
-      case 'createdAt_asc':
+      case "createdAt_asc":
         orderBy = { createdAt: "asc" };
         break;
-      case 'updatedAt_desc':
+      case "updatedAt_desc":
         orderBy = { updatedAt: "desc" };
         break;
-      case 'updatedAt_asc':
+      case "updatedAt_asc":
         orderBy = { updatedAt: "asc" };
         break;
-      case 'priority_desc':
-        orderBy = [
-          { priority: "desc" },
-          { createdAt: "desc" }
-        ];
+      case "priority_desc":
+        orderBy = [{ priority: "desc" }, { createdAt: "desc" }];
         break;
-      case 'priority_asc':
-        orderBy = [
-          { priority: "asc" },
-          { createdAt: "desc" }
-        ];
+      case "priority_asc":
+        orderBy = [{ priority: "asc" }, { createdAt: "desc" }];
         break;
       default:
         orderBy = { createdAt: "desc" };
@@ -118,20 +114,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const skip = (page - 1) * pageSize;
 
   const tickets = await db.ticket.findMany({
-  where: whereClause,
-  orderBy,
-  skip,
-  take: pageSize,
-  include: {
-    assignees: {
-      include: { user: { select: { name: true, email: true } } },
+    where: whereClause,
+    orderBy,
+    skip,
+    take: pageSize,
+    include: {
+      assignees: {
+        include: { user: { select: { name: true, email: true } } },
+      },
+      user: {
+        select: { name: true, email: true },
+      },
     },
-    user: {
-      select: { name: true, email: true },
-    },
-  },
-});
-
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -142,20 +137,30 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <p className="text-gray-600">Manage your support tickets</p>
           </div>
           <div className="flex gap-3">
-            <InviteUsersClient 
-              organizationId={user.organizationId} 
-              userRole={user.role} 
+            <InviteUsersClient
+              organizationId={user.organizationId}
+              userRole={user.role}
             />
             <Link
               href="/dashboard/tickets/new"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              <svg
+                className="-ml-1 mr-2 h-5 w-5"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
               </svg>
               New Ticket
             </Link>
           </div>
+          <SignOutButton />
         </div>
 
         <TicketFilters />
@@ -166,13 +171,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               Tickets ({totalCount})
             </h3>
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              {status && `Status: ${status.replace('_', ' ')} | `}
+              {status && `Status: ${status.replace("_", " ")} | `}
               {priority && `Priority: ${priority.toLowerCase()} | `}
-              {sort && `Sorted: ${sort.replace('_', ' ')} | `}
+              {sort && `Sorted: ${sort.replace("_", " ")} | `}
               Page {page} of {totalPages}
             </p>
           </div>
-          
+
           {tickets.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
               No tickets found. Create your first ticket to get started.
@@ -192,13 +197,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                             {ticket.title}
                           </p>
                           <div className="ml-2 flex-shrink-0 flex">
-                            <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[ticket.status]}`}>
-                              {ticket.status.replace('_', ' ')}
+                            <p
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[ticket.status]}`}
+                            >
+                              {ticket.status.replace("_", " ")}
                             </p>
                           </div>
                         </div>
                         <div className="ml-2 flex-shrink-0 flex">
-                          <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityColors[ticket.priority]}`}>
+                          <p
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityColors[ticket.priority]}`}
+                          >
                             {ticket.priority.toLowerCase()}
                           </p>
                         </div>
@@ -206,23 +215,55 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <div className="mt-2 sm:flex sm:justify-between">
                         <div className="sm:flex">
                           <p className="flex items-center text-sm text-gray-500">
-                            <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                            <svg
+                              className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                             {ticket.assignees && ticket.assignees.length > 0
-                              ? ticket.assignees.map((assignee) => assignee.user.name).join(', ')
-                              : 'Unassigned'}
+                              ? ticket.assignees
+                                  .map((assignee) => assignee.user.name)
+                                  .join(", ")
+                              : "Unassigned"}
                           </p>
                           <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                            <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                            <svg
+                              className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                clipRule="evenodd"
+                              />
                             </svg>
-                            Created {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+                            Created{" "}
+                            {formatDistanceToNow(new Date(ticket.createdAt), {
+                              addSuffix: true,
+                            })}
                           </p>
                         </div>
                         <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                          <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          <svg
+                            className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                           Created by {ticket.user.name}
                         </div>
@@ -235,7 +276,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           )}
         </div>
 
-        <Pagination 
+        <Pagination
           currentPage={page}
           totalPages={totalPages}
           pageSize={pageSize}
