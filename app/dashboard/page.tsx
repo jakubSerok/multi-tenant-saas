@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SignOutButton } from "./components/SignOutButton";
 import { db } from "@/lib/db";
 import { authOptions } from "@/app/api/auth/options";
+import { KanbanViewButton } from "./components/KanbanViewButton";
 
 import Link from "next/link";
 import { TicketPriority, TicketStatus, UserRole } from "@prisma/client";
@@ -137,10 +138,16 @@ export default async function DashboardPage({
             <p className="text-gray-600">Manage your support tickets</p>
           </div>
           <div className="flex gap-3">
-            <InviteUsersClient
-              organizationId={user.organizationId}
-              userRole={user.role}
-            />
+            {user.role === "MANAGER" && (
+              <>
+                <InviteUsersClient
+                  organizationId={user.organizationId}
+                  userRole={user.role}
+                />
+                <KanbanViewButton />
+              </>
+            )}
+
             <Link
               href="/dashboard/tickets/new"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
