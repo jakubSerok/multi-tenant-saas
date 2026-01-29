@@ -94,9 +94,37 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        organizationId: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const ticketsData = await db.ticket.findMany({
       where: {
-        organizationId: session.user.organizationId,
+        organizationId: user.organizationId,
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
     return NextResponse.json(ticketsData);
