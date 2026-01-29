@@ -38,19 +38,19 @@ export default async function TicketPage({ params }: Props) {
     },
     include: {
       user: {
-        select: { name: true, email: true },
+        select: { id: true, name: true, email: true },
       },
       assignees: {
         include: {
-          user: { select: { name: true, email: true } },
+          user: { select: { id: true, name: true, email: true } },
         },
       },
       comments: {
         include: {
-          user: { select: { name: true, email: true } },
+          user: { select: { id: true, name: true, email: true } },
           replies: {
             include: {
-              user: { select: { name: true, email: true } },
+              user: { select: { id: true, name: true, email: true } },
             },
             orderBy: { createdAt: "asc" },
           },
