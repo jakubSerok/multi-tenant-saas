@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   webpack: (config: any, { isServer }: any) => {
     if (isServer) {
       config.externals = [
@@ -10,5 +10,6 @@ const nextConfig = {
     }
     return config;
   },
+  turbopack: {},
 };
 export default nextConfig;
